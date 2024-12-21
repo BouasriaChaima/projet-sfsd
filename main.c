@@ -19,14 +19,25 @@ struct tMetaD{
   char modeorgaglobale[51];
   char modeorgainterne[51];
 };
-struct tBuffer {
-    struct tbloc b;
-};
 struct MS {
     struct tbloc m[];
     int nb;
     int nblibre;
 };
+//function to rename a fike
+
+void renommerfichier(FILE *f, char newname[]){
+
+}
+// recherche d'un fichier en cas d'organisation contigu
+void recherchecontiguordonne(FILE *ms, FILE *f, int id)){
+  struct tbloc buffer;
+
+}
+//suppresion logique an cas d'organisation contigu
+void supplogiccontigu(FILE *f, int id){
+
+}
 int main()
 {
 
