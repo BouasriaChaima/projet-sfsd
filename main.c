@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define MAX_FB 100
+#include<string.h>
 
 struct tenr{
   int id;
@@ -31,21 +32,19 @@ struct tMetaD{
   char modeorgaglobale[51];
   char modeorgainterne[51];
 };
-<<<<<<< HEAD
+
 
 struct tBuffer {
     struct tbloc b;
 };
 
-=======
->>>>>>> 28be3d98cfbc38bede8860eaa36eed59785e9877
-struct MS {
 
+struct MS {
     int nb;
     int nblibre;
     struct tbloc m[];
 };
-<<<<<<< HEAD
+
 
 // fonction pour cration de blocs en mode contigue
 void creatBlocContigue( struct tbloc *BLOC){
@@ -118,21 +117,26 @@ struct tenr temp;
 
 
 // fonction pour creation des fichiers
-void CreeFichier (char nomFichier [21] , int nbrEnreg , int choixGlobale , int choixIntern){ //contigue = 0 , chainee = 1 , trier = 0 , non trier = 1
+void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int choixIntern){ //contigue = 0 , chainee = 1 , trier = 0 , non trier = 1
   //File *file ;
   int nbrBloc ;
   struct tbloc BlocContigue ;
   struct tblocChaine *headBlocChainee = NULL ;
   struct tblocChaine *currentBlocChainee = NULL;
+  struct tMetaD MT;
 
    printf("give the name of the file \n:");
    scanf("%s\n" , &nomFichier);
+   strncpy(MT.nomfichier, nomFichier, sizeof(MT.nomfichier));
+
    // create the file
    FILE *file = fopen(nomFichier , "w");
 
    printf ("give the number of records \n:");
    scanf("%d\n" , &nbrEnreg);
    nbrBloc = nbrEnreg / MAX_FB;
+   MT.taillenreg = nbrEnreg;
+   MT.tailleblocs = nbrBloc ;
 
 
    printf ("give the mode of global file creation\n : ");
@@ -143,24 +147,38 @@ void CreeFichier (char nomFichier [21] , int nbrEnreg , int choixGlobale , int c
 
     if ( choixGlobale == 0 ){
     // le mode globale = contigue
+    strncpy(MT.modeorgaglobale , "contigue" , sizeof(MT.modeorgaglobale));
         for (int i = 0 ; i < nbrBloc - 1 ; i++ ){
             printf("creation of bloc %d (contigue)\n" , i+1);
             creatBlocContigue(&BlocContigue);
             fwrite(&BlocContigue , sizeof(struct tbloc),1 , file);
+            if (i == 0) {
+                MT.adrprebloc = (long)&BlocContigue;
+            }
             if (choixIntern == 0){
                 // choix interne : tier
+                strncpy(MT.modeorgainterne , "trier" , sizeof(MT.modeorgainterne));
                 trierContigue(BlocContigue);
+            } else {
+              strncpy(MT.modeorgainterne , "non trier" , sizeof(MT.modeorgainterne));
             }
         }
     } else if (choixGlobale == 1){
       // le mode globale = chainee
+      strncpy(MT.modeorgaglobale , "chainee" , sizeof(MT.modeorgaglobale));
       for (int i = 0 ; i < nbrBloc - 1; i++){
       printf("cration of bloc %d (chainee)\n" , i+1);
       // mode FIFO
        struct tblocChaine *newBloc = creatBlocChaine();
+       if (i == 0){
+           MT.adrprebloc = (long)newBloc;
+       }
         if (choixIntern == 0 ){
             // choix interne = trier
+            strncpy(MT.modeorgainterne , "trier" , sizeof(MT.modeorgainterne));
             trierChainee(*newBloc);
+        } else {
+          strncpy(MT.modeorgainterne , "non trier" , sizeof(MT.modeorgainterne));
         }
        if (headBlocChainee == NULL){
         headBlocChainee = newBloc ;
@@ -173,14 +191,22 @@ void CreeFichier (char nomFichier [21] , int nbrEnreg , int choixGlobale , int c
        fwrite(newBloc , sizeof( struct tblocChaine), 1 ,file);
     }
     }
+    fclose(file);
+ // creation du fichier meta donnees associer
+  char metaFichierMT [53];
+  snprintf(metaFicherMT, sizeof(metaFicherMT), "MT%s", nomFichier);
+  FILE *metaFichier = fopen(metaFichier , "w");
+  fwrite(&MT , sizeof(struct tMetaD) , 1 , metaFichier);
+  fclose(metaFichier);
 }
 
 
 
-=======
+
+
 //function to rename a fike
 
-void renommerfichier(FILE *f, char newname[]){
+/*void renommerfichier(FILE *f, char newname[]){
 
 }
 // recherche d'un fichier en cas d'organisation contigu
@@ -191,8 +217,8 @@ void recherchecontiguordonne(FILE *ms, FILE *f, int id)){
 //suppresion logique an cas d'organisation contigu
 void supplogiccontigu(FILE *f, int id){
 
-}
->>>>>>> 28be3d98cfbc38bede8860eaa36eed59785e9877
+}*/
+
 int main()
 {
 
