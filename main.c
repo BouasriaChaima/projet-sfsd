@@ -31,17 +31,21 @@ struct tMetaD{
   char modeorgaglobale[51];
   char modeorgainterne[51];
 };
+<<<<<<< HEAD
 
 struct tBuffer {
     struct tbloc b;
 };
 
+=======
+>>>>>>> 28be3d98cfbc38bede8860eaa36eed59785e9877
 struct MS {
 
     int nb;
     int nblibre;
     struct tbloc m[];
 };
+<<<<<<< HEAD
 
 // fonction pour cration de blocs en mode contigue
 void creatBlocContigue( struct tbloc *BLOC){
@@ -173,6 +177,22 @@ void CreeFichier (char nomFichier [21] , int nbrEnreg , int choixGlobale , int c
 
 
 
+=======
+//function to rename a fike
+
+void renommerfichier(FILE *f, char newname[]){
+
+}
+// recherche d'un fichier en cas d'organisation contigu
+void recherchecontiguordonne(FILE *ms, FILE *f, int id)){
+  struct tbloc buffer;
+
+}
+//suppresion logique an cas d'organisation contigu
+void supplogiccontigu(FILE *f, int id){
+
+}
+>>>>>>> 28be3d98cfbc38bede8860eaa36eed59785e9877
 int main()
 {
 
