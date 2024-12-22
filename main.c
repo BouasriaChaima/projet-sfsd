@@ -9,13 +9,11 @@ struct tenr{
   int supp;
 };
 
-
 struct tbloc{
  struct tenr B[MAX_FB];
  int NE;
  int occup; // si occupe=> 1  si non 0
 };
-
 
 struct tblocChaine {
  struct tenr B [MAX_FB];
@@ -32,7 +30,6 @@ struct tMetaD{
   char modeorgaglobale[51];
   char modeorgainterne[51];
 };
-
 
 struct tBuffer {
     struct tbloc b;
@@ -115,6 +112,14 @@ struct tenr temp;
 
 }
 
+// creation de fichier metadonees
+void creatMTfile (struct tMetaD *MT){
+   char metaFile [56];
+   snprintf(metaFile , sizeof(metaFile), "%s.meta" , MT->nomfichier);
+   FILE *MTfile = fopen(metaFile, "w");
+   fwrite(MT , sizeof(struct tMetaD), 1, metaFile);
+   fclose(MTfile);
+}
 
 // fonction pour creation des fichiers
 void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int choixIntern){ //contigue = 0 , chainee = 1 , trier = 0 , non trier = 1
@@ -192,15 +197,35 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
     }
     }
     fclose(file);
- // creation du fichier meta donnees associer
-  char metaFichierMT [53];
-  snprintf(metaFicherMT, sizeof(metaFicherMT), "MT%s", nomFichier);
-  FILE *metaFichier = fopen(metaFichier , "w");
-  fwrite(&MT , sizeof(struct tMetaD) , 1 , metaFichier);
-  fclose(metaFichier);
+   creatMTfile(&MT);
 }
 
-
+// fonction lireMT
+ void lireMT (FILE *f , int nc , void* result ){
+   rewind(f);
+   struct tMetaD MT;
+   fread(&MT , sizeof( struct tMetaD) , 1 , f);
+   switch(nc){
+     case 1 : //fileName
+      strcpy((char*)result , MT.nomfichier);
+      break ;
+     case 2 : // tailleBloc
+        *(int*)result = MT.tailleblocs;
+        break;
+     case 3 : // tailleEnre
+        *(int*)result = MT.taillenreg;
+        break;
+     case 4 : // adressePrBloc
+        *(int*)result = MT.adrprebloc;
+        break;
+     case 5 : // modeGlobal
+        strcpy((char*)result , MT.modeorgaglobale);
+        break;
+     case 6 : // modeIntern
+        strcpy((char*)result , MT.modeorgainterne);
+        break;
+   }
+ }
 
 
 
