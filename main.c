@@ -6,7 +6,7 @@
 struct tenr{
   int id;
   char nom[21];
-  int supp;
+  int supp; // si supprime =1 , sinon =0
 };
 
 struct tbloc{
@@ -31,17 +31,19 @@ struct tMetaD{
   char modeorgainterne[51];
 };
 
+<<<<<<< HEAD
 struct tBuffer {
     struct tbloc b;
 };
 
 
+=======
+>>>>>>> d4deacef09d54fe9605c5808f054a9c02edcde36
 struct MS {
     int nb;
     int nblibre;
     struct tbloc m[];
 };
-
 
 // fonction pour cration de blocs en mode contigue
 void creatBlocContigue( struct tbloc *BLOC){
@@ -227,22 +229,137 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
    }
  }
 
+//function to rename a file
+void renamefile(File *ms, File *f, char newname[]){
+    struct tbloc
 
-
-//function to rename a fike
-
-/*void renommerfichier(FILE *f, char newname[]){
 
 }
-// recherche d'un fichier en cas d'organisation contigu
-void recherchecontiguordonne(FILE *ms, FILE *f, int id)){
+struct tMetaD{
+  char nomfichier[51];
+  int tailleblocs;
+  int taillenreg;
+  int adrprebloc;
+  char modeorgaglobale[51];
+  char modeorgainterne[51];
+};
+// recherche d'un enregistrement dans un fichier  en cas d'organisation contigu
+void  rechercheenregistement(FILE *ms, FILE *f, int id,int adrs[2])){
+   char orgaglobale[51];
+    int nbrbloc=1;
+     int adr = lirecharacteristique();//adresse du premier bloc
+     int taille = lirecharacteristique();
+   strcpy(orgaglobale,lirecharacteristique());//on verifie s'il s'agit d'un fichier contigu ou non
+   if(strcmp(orgaglobale, "chainee")==0){
+      struct tblocChaine buffer;
+     char orgainterne[51];
+  strcpy(orgainterne, lirecharacteristique());
+  fseek(ms, adr*sizeof(buffer), SEEK_SET);
+       //verification s'il est ordonne
+  // recherche dichotomique
+           if(strcmp(orgainterne, "trier")==0){
+               for(int i=0;i<taille;i++){
+            fread(&buffer, sizeof(buffer), 1, ms);
+             int fin = buffer.NE -1;
+              int debut=0;
+           while (debut<=fin) {
+               int milieu = (fin+debut)/2;
+                int n= buffer.NE-1;
+                     if (buffer.B[milieu].id==id) {
+                        adrs[0]= numbloc;
+                        adrs[1]= milieu +1;
+                        printf("Bloc:%d, Enregistement:%d", adrs[0], adrs[1];);
+                  }
+                  else if (buffer.B[milieu].id < id) {
+                  debut = milieu + 1; // On cherche dans la moitié droite
+                 }
+                    else(buffer.B[milieu].id>id) {
+                    fin = milieu-1;
+                  }
+                    }
+        numbloc++;
+        buffe=buffer->next;
+                     }
+  }
+    //recherche sequentielle
+           else if(strcmp(orgainterne, "non trier")==0){
+                for (int i=0;i<taille;i++){
+                fread(&buffer, sizeof(buffer), 1, ms);
+                int j=0;
+               while(j<buffer.NE){
+                   if(buffer.B[j].id == id){
+                   adrs[0]= numbloc;
+                   adrs[1]= j +1;
+                  printf("Bloc:%d, Enregistement:%d", adrs[0], adrs[1];);
+                     }
+                  }
+        numbloc++;
+        buffer
+           }
+   }
+   }
+   else if (strcmp(orgaglobale, "contigue")==0){
   struct tbloc buffer;
+  char orgainterne[51];
+  strcpy(orgainterne, lirecharacteristique());
+  char orgainterne = lirecharacteristique();
+  fseek(ms, adr*sizeof(buffer), SEEK_SET);
+  //verification s'il est ordonne
+  // recherche dichotomique
+        if(strcmp(orgainterne, "trier")==0){
+              for(int i=0;i<taille;i++){
+            fread(&buffer, sizeof(buffer), 1, ms);
+             int fin = buffer.NE -1;
+              int debut=0;
+           while (debut<=fin) {
+               int milieu = (fin+debut)/2;
+                int n= buffer.NE-1;
+                     if (buffer.B[milieu].id==id) {
+                          adrs[0]= numbloc;
+                           adrs[1]= milieu +1;
+                           printf("Bloc:%d, Enregistement:%d", adrs[0], adrs[1];);
+                  }
+                  else if (buffer.B[milieu].id < id) {
+                  debut = milieu + 1; // On cherche dans la moitié droite
+                 }
+                    else(buffer.B[milieu].id>id) {
+                    fin = milieu-1;
+                  }
+                    }
+        numbloc++;
+                     }
+  }
+    //recherche sequentielle
+          else if(strcmp(orgainterne, "non trier")==0){
+               for (int i=0;i<taille;i++){
+                fread(&buffer, sizeof(buffer), 1, ms);
+                int j=0;
+               while(j<buffer.NE){
+                   if(buffer.B[j].id == id){
+                   adrs[0]= numbloc;
+                   adrs[1]= j +1;
+                  printf("Bloc:%d, Enregistement:%d", adrs[0], adrs[1];);
+            }
+        }
+        numbloc++;
+    }
+  }
 
+}
 }
 //suppresion logique an cas d'organisation contigu
-void supplogiccontigu(FILE *f, int id){
+void supplogiccontigu(FILE *ms, FILE *f, int id){
+    int adrs[2];
+    struct tbloc buffer;
+    n = adrs[0];
+    m= adrs[1];
+    recherchecontiguordonne(ms, f,id,adrs);
+   int a = lirecharacteristique();//adresse du premier bloc
+   fseek(ms, a*sizeof(buffer), SEEK_SET);
+   fseek(ms, n*sizeof(buffer), SEEK_CUR);
+   buffer.b[m-1].supp =1;
 
-}*/
+}
 
 int main()
 {
