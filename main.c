@@ -232,7 +232,7 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
 
 
 
-// recherche d'un enregistrement dans un fichier  en cas d'organisation contigu
+// recherche d'un enregistrement dans un fichier
 void  recherchenregistement(FILE *ms, FILE *f, int id,int adrs[2]){
    char orgaglobale[51];
     char orgainterne[51];
@@ -402,16 +402,7 @@ void supprphysique(FILE *ms, FILE *f, int id){
              }
         }
 }
-void creatBlocContigue( struct tbloc *BLOC){
-   BLOC->occup = 1 ;
-   BLOC->NE = 0 ;
-  for (int i = 0 ; i < MAX_FB -1; i++){
-    printf("give the id and the name of product number: %d\n" , i+1 );
-    scanf("%d\n" , &BLOC->B[i].id);
-    scanf("%s\n", &BLOC->B[i].nom);
-    BLOC->B[i].supp = 1 ; // existe
-    BLOC->NE++;
-  }
+
 //insertion d'un enregistrement
 void insertion(FILE *ms, FILE *f){
     rewind(ms);
@@ -537,70 +528,4 @@ int main(){
 
     return 0;
 }
-=======
-#include <stdio.h>
-#include "Initialisation_Disque.c"
-#include "Vidage.c"
-#include "Défragmentation_Blocs.c"
-#include "Update.c"
-#include "Gestion_blocs_libres.c"
 
-void afficherMenu() {
-    printf("\n--- Menu Principal ---\n");
-    printf("1. Initialiser le disque\n");
-    printf("2. Vidage de la mémoire secondaire\n");
-    printf("3. Défragmenter les blocs\n");
-    printf("4. Mettre à jour les métadonnées\n");
-    printf("5. Gérer les blocs libres (vérification)\n");
-    printf("6. Quitter\n");
-    printf("Votre choix : ");
-}
-
-int main() {
-    Disk myDisk; // Déclarer le disque principal
-    int choix;
-
-    do {
-        afficherMenu();
-        scanf("%d", &choix);
-
-        switch (choix) {
-            case 1:
-                // Initialiser le disque
-                initializeDisk(&myDisk);
-                printf("Disque initialisé avec succès.\n");
-                break;
-
-            case 2:
-                // Vidage de la mémoire secondaire
-                clearDisk(&myDisk);
-                printf("Mémoire secondaire vidée avec succès.\n");
-                break;
-
-            case 3:
-                // Défragmenter les blocs
-                defragmentBlocks(&myDisk);
-                printf("Blocs défragmentés avec succès.\n");
-                break;
-
-            case 4:
-                // Mettre à jour les métadonnées
-                // stillSTILLstill
-
-            case 5:
-                // Gérer les blocs libres
-                // stillSTILLstill
-
-            case 6:
-                printf("Au revoir !\n");
-                break;
-
-            default:
-                printf("Choix invalide. Veuillez réessayer.\n");
-        }
-
-    } while (choix != 6);
-
-    return 0;
-}
->>>>>>> 2533a221030024f63fefdb1c1a24d25ebea22b1e
