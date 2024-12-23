@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <stdio.h>
 #include <stdlib.h>
 #define MAX_FB 100
@@ -45,10 +44,10 @@ typedef struct {
 
 
 // fonction pour cration de blocs en mode contigue
-void creatBlocContigue( struct tbloc BLOC){
+void creatBlocContigue( struct tbloc BLOC int numenr){
    BLOC->occup = 1 ;
    BLOC->NE = 0 ;
-  for (int i = 0 ; i < MAX_FB -1; i++){
+  for (int i = 0 ; i < numenr -1; i++){
     printf("give the id and the name of product number: %d\n" , i+1 );
     scanf("%d\n" , &BLOC->B[i].id);
     scanf("%s\n", &BLOC->B[i].nom);
@@ -57,16 +56,16 @@ void creatBlocContigue( struct tbloc BLOC){
   }
 }
 // fonction pour creation de blocs en mode chainee
-struct tblocChaine *creatBlocChaine (){
+struct tblocChaine *creatBlocChaine (int numenr){
    struct  tblocChaine *newBloc = (struct tblocChaine *)malloc(sizeof(struct tblocChaine));
      //if (*newBloc == NULL){}
      newBloc->occup = 1 ;
      newBloc->NE = 0;
-     for (int i = 0 ; i < MAX_FB ; i++ ){
+     for (int i = 0 ; i < numenr ; i++ ){
         printf("give the id and the name of product number: %d\n" , i+1 );
         scanf("%d\n" , &newBloc->B[i].id);
         scanf("%s\n", &newBloc->B[i].nom);
-        newBloc->B[i].supp = 1 ; // existe
+        newBloc->B[i].supp = 0 ; // existe
         newBloc->NE++;
      }
      newBloc->next = NULL;
@@ -346,19 +345,19 @@ void supprlogique(FILE *ms, FILE *f, int id){
    int m=adrs[1];
    lireMT(f,4,a);
    lireMT(f,5,orgaglobale);
-    recherchenregistrement(ms, f,id,adrs);
-                if(strcmp(orgaglobale, "contigue")==0){
+    recherchenregistrement(ms, f,id,adrs); // recupiration de l'adresse d'enregistrement qu'on veut supprimer
+                if(strcmp(orgaglobale, "contigue")==0){// verifie s'il est contigue
                 struct tbloc buffer;
             fseek(ms, a*sizeof(buffer), SEEK_SET);
              fseek(ms, n*sizeof(buffer), SEEK_CUR);
              fread(&buffer, sizeof(buffer), 1, ms);
-             buffer.b[m-1].supp =1;
+             buffer.b[m-1].supp =1;// supp =1 , il est supprime
                 }
-         else if(strcmp(orgaglobale,"chainee")==0){
+         else if(strcmp(orgaglobale,"chainee")==0){//fichier des blocs chainee
             struct tblocChaine buffer;
              fread(&buffer, sizeof(buffer), 1, ms);
             for(int i=0;i=<adr;i++){
-                buffer=buffer->next;
+              buffer=buffer->next;//parcourir tous les blocs comme une liste chainee jusqu'on arrive a l'adresse
              }
              for(int i=0;i<adrs[0];i++){
                 buffer = buffer.next;
@@ -371,34 +370,34 @@ void supprlogique(FILE *ms, FILE *f, int id){
 // suppression physique
 void supprphysique(FILE *ms, FILE *f, int id){
     int add [2];
-    recherchenregistement(ms, f, id,add[2]);
+    recherchenregistement(ms, f, id,add[2]);//recupiration de l'adresse
     char orgaglobale[51];
     lireMT(f,5,orgaglobale);
     int taille;
     lireMT(f,2,taille);
     int adr;
     lireMT(f,4,adr);
-          if(strcmp(orgaglobale, "contigue")==0){
+          if(strcmp(orgaglobale, "contigue")==0){// verifiant de mode d'organisation globale
                 struct tbloc buffer;
               fseek(ms, adr*sizeof(buffer),SEEK_SET);
-              fseek(ms, add[0]*sizeof(buffer), SEEK_CUR);
+              fseek(ms, add[0]*sizeof(buffer), SEEK_CUR);//passer directement a l'dresse du bloc
               fread(&buffer, sizeof(buffer), 1, ms);
               for(int i=add[1];i<buffer.NE;i++){
-                 buffer.B[i]=buffer.B[i+1];
+                 buffer.B[i]=buffer.B[i+1];//decalage des enregistrements
               }
         }
         else if(strcmp(orgaglobale, "chainee")==0){
             struct tblocChaine buffer;
              fread(&buffer, sizeof(buffer), 1, ms);
                 for(int i=0;i=<adr;i++){
-                buffer=buffer->next;
+                buffer=buffer->next;// passer par les liens de chainage
              }
              for(int i=0;i<adr[0];i++){
                 buffer=buffer->next;
              }
                fread(&buffer, sizeof(buffer), 1, ms);
              for(int i=adr[1];i<buffer.NE;i++){
-                buffer.B[i]=buffer.B[i+1];
+                buffer.B[i]=buffer.B[i+1];//decalage
              }
         }
 }
@@ -408,10 +407,8 @@ void insertion(FILE *ms, FILE *f){
     rewind(ms);
     struct tenr newenr;
     int a, taille;
-    lireCaracteristique(f,4,a);
-    lireMT(f,2,taille);
-    int adrdernier = (a+taille)-1;
-
+    lireCaracteristique(f,4,a);//recupiration d'adresse du premier bloc
+    lireMT(f,2,taille);// recupiration de la taille du fichier en blocs
     printf("Entrez le ID du nouveau enregistrement :\n");
     printf("ID : ");
     scanf("%d", &newenr.id);
@@ -421,68 +418,163 @@ void insertion(FILE *ms, FILE *f){
     char orgainterne [51];
     lireMT(f,6,orgainterne);
      lireMt(f,5,orgaglobale);
-        if(strcmp(orgaglobale, "contigue")==0){
+        if(strcmp(orgaglobale, "contigue")==0){//mode d'organisation globale
                 struct tbloc buffer;
-                fseek(ms, adrdernier*sizeof(buffer), SEEK_SET);
             if(strcmp(orgainterne, "non trier")==0){
               fread(&buffer, sizeof(buffer), 1, ms);
-                    if(buffer.NE < MAX_FB){
-                  buffer.B[buffer.NE].id = newenr.id;
+               int adrdernier = (a+taille)-1;
+              fseek(ms, adrdernier*sizeof(buffer), SEEK_SET);//passer directement au dernier bloc
+                    if(buffer.NE < MAX_FB){//en voir si le bloc est charge completement
+                  buffer.B[buffer.NE].id = newenr.id;// si non on ajoute a la fin
                  strcpy(buffer.B[buffer.NE].nom, newenr.nom);
+                 buffer.B[buffer.NE].supp=0;
                   buffer.NE++;
                   fseek(ms, -sizeof(buffer), SEEK_CUR);
                   write(&buffer, sizeof(buffer), 1, ms);
                  MAJMeta(f, 2, n+1);
                           }
-                   else{
+                   else{// si oui on alloue un nouveau bloc
                      struct tbloc buffer2;
-                     creatBlocContigue(buffer2);
+                     creatBlocContigue(buffer2, 1);
+                       buffer2.B[0].id = newenr.id;// si non on ajoute a la fin
+                     strcpy(buffer2.B[0].nom, newenr.nom);
+                     buffer2.B[0].supp=0;
                    fseek(ms, (aDernierBloc+1)*sizeof(buffer), SEEK_SET);
                     fwrite(&buffer, sizeof(buffer), 1, ms);
                   MAJMeta(f, 2, n+1);
-                  MAJMeta(f, 3, taille+1);
+                  MAJMeta(f, 3, taille+1);//mise a jour de la taille du fichier
                   }
                  }
-        else {    int numbloc=1;
+        else {   int numbloc=1;// cas du fichier trier
                 for(int i=0;i<taille;i++){
                     fread(&buffer, sizeof(buffer), 1, ms);
                     int debut = 0;
                     int fin = buffer.NE;
-                   while (debut <= fin) {
+                   while (debut <= fin) {// on fait la recherche dichotomique
                    int milieu = (debut + fin) / 2;
                    if (buffer.B[milieu] < ) {
                   debut  = milieu + 1;
                    } else {
-                 fin = milieu - 1;
+                 fin = milieu - 1;// l'adresse d'insertion se trouve au debut
                  }
               }
               numbloc++;
                 }
+                rewind(ms);// on retourne au debut
                 fseek(ms , (numbloc+a)*sizeof(buffer),SEEK_SET);
                 fread( &buffer, sizeof(buffer), 1, ms);
-                if(buffer.NE<MAX_FB){
-                    for(int i=buffer.NE;i>debut;i--){
+                if(buffer.NE<MAX_FB){// on verifie si le bloc est plein
+                    for(int i=buffer.NE;i>debut;i--){//decalage des enre apres l'adresse d'insertion
                         buffer.B[i]=buffer.B[i-1];
                     }
-                    buffer.B[buffer.NE].id = newenr.id;
-                  strcpy(buffer.B[buffer.NE].nom, newenr.nom);
+                    buffer.B[debut].id = newenr.id;
+                  strcpy(buffer.B[debut].nom, newenr.nom);
+                  buffer.B[debut].supp=0;
                   buffer.NE++;
                   fseek(ms, -sizeof(buffer), SEEK_CUR);
                   write(&buffer, sizeof(buffer), 1, ms);
                   MAJMeta(f, 2, n+1);
                      }
+                     else{// s'il est plein on alloue un nouveau bloc
+                            struct tbloc buffer2;
+                    creatBlocContigue(buffer2, 1);
+                    buffer2.B[0]=buffer.B[buffer.NE];// on met le dernier element du bloc plein ds le nv bloc
+                    for(int i=buffer.NE;i>debut;i--){
+                        buffer.B[i]=buffer.B[i-1];
+                    }
+                    buffer.B[debut].id = newenr.id;
+                    strcpy(buffer.B[debut].nom, newenr.nom);
+                    buffer.B[debut].supp=0;
+                  fseek(ms, -sizeof(buffer), SEEK_CUR);
+                  write(&buffer, sizeof(buffer), 1, ms);
+                  MAJMeta(f, 2, n+1);//mise a jour du taille du fichier
+                     }
 
               }
+        }
           else if(strcmp(orgaglobale, "chainee")==0){
-            struct tblocChaine buffer;
-            if(strcmp(orgainterne, "non trier")==0){
+            struct tblocChaine buffer, buffer2;
+               if(strcmp(orgainterne, "non trier")==0){// on verifie s'il est non trier
+                     fread(&buffer, sizeof(buffer),1,ms);
+                     for(int i =0;i<a;i++){
+                        buffer = buffer.next;
+                     }
+                     for(int i =0;i<taille;i++){
+                        buffer = buffer.next;
+                     }
+                     fread(&buffer, sizeof(buffer),1,ms);// on insere a la fin
+                     if(buffer.NE<MAX_FB){// verifiant si le dernier bloc est plein
+                           buffer.B[buffer.NE].id = newenr.id;
+                          strcpy(buffer.B[buffer.NE].nom, newenr.nom);
+                          buffer.B[buffer.NE].supp=0;
+                          buffer.NE++;
+                          write(&buffer, sizeof(buffer), 1, ms);
+                          MAJMeta(f, 2, n+1);
+                     }
+                     else{
+                      struct tblocChaine  nbloc = creatBlocChaine(1);// si le dernier bloc est plein on alloue un nv bloc
+                      nbloc.NE=1;
+                      nbloc.B[0].id = newenr.id;
+                      strcpy(buffer.B[buffer.NE].nom, newenr.nom);
+                      nbloc.occup=1;
+                     buffer.next=nbolc;
+                    taille ++;
+                    MAJMeta(f, 2, taille);//mise a jour de la taille du fichier
+                     }
 
             }
-            else{
-
-            }
+            else if (strcmp(orgainterne, "trier")==0){// cas du fichier des blocs chainees tries
+                 for(int i=0;i<taille;i++){//recherche dichotomique
+                           int numbloc=1;//pour compter le num de bloc ou on va inserer
+                             fread(&buffer, sizeof(buffer), 1, ms);
+                            int fin = buffer.NE -1;
+                             int debut=0;
+                              while (debut<=fin) {
+                                int milieu = (fin+debut)/2;
+                                int n= buffer.NE-1;
+                                if (buffer.B[milieu].id < id) {
+                              debut = milieu + 1; // l'adresse d'insertion se trouve au "debut"
+                                   }
+                                 else if(buffer.B[milieu].id> id){
+                                  fin = milieu-1;
+                                   }
+                            }
+                             numbloc++;
+                             buffer=buffer.next;
+                        }
+                        rewind(ms);// on retourne au debut
+                  for(int i=0;i<a;i++){
+                    buffer = buffer.next;
+                  }
+                   for(int i=0;i<numbloc;i++){
+                    buffer = buffer.next;//parcourir jusqu'au bloc qui contient l'adresse d'insertion
+                  }
+                  if(buffer.NE<MAX_FB){// si le bloc n'est pas plein
+                  for(int i=buffer.NE;i>debut;i--){
+                    buffer.B[i]=buffer.B[i-1];// on decale
+                  }
+                  buffer.B[debut].id = newenr.id;
+                  strcpy(buffer.B[debut].nom, newenr.nom);// et on insere
+                  buffer.B[debut].supp=0;
+                  buffer.NE++;
+                }
+                else{
+                     struct tblocChaine  nbloc = creatBlocChaine(1);// s'il est plein pn alloue un nv bloc
+                     nbloc.B[0].id = buffer[buffer.NE].id;// on met le dernier element du bloc ds le nv bloc
+                  strcpy(nbloc.B[0].nom, buffer.B[buffer.NE].nom);
+                     nbloc.B[0].supp=0;
+                     buffer.next=nbloc//met a jour le chainage
+                    for(int i=buffer.NE;i>debut;i--){
+                    buffer.B[i]=buffer.B[i-1];// puis on decale
+                  }
+                  buffer.B[debut].id = newenr.id;
+                  strcpy(buffer.B[debut].nom, newenr.nom);// et on insere
+                  buffer.B[debut].supp=0;
+                }
+                }
           }
 }
+
 // fonction pour lire tous les enregistrements
 void lirenregistrements(FILE *ms, FILE *f){
      char orgaglobale[51];
@@ -525,6 +617,11 @@ void lirenregistrements(FILE *ms, FILE *f){
   //fonction de compactage(proposition authomatique en cas d'espace insuffisant
 
 int main(){
+
+
+
+
+
 
     return 0;
 }
