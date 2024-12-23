@@ -246,14 +246,18 @@ struct tMetaD{
 // recherche d'un enregistrement dans un fichier  en cas d'organisation contigu
 void  rechercheenregistement(FILE *ms, FILE *f, int id,int adrs[2])){
    char orgaglobale[51];
+    char orgainterne[51];
     int nbrbloc=1;
-     int adr = lirecharacteristique();//adresse du premier bloc
-     int taille = lirecharacteristique();
-   strcpy(orgaglobale,lirecharacteristique());//on verifie s'il s'agit d'un fichier contigu ou non
+    lireMT (FILE *f , int nc , void* result )
+     int adr ;
+     lirecharacteristique(f,4,adr);//adresse du premier bloc
+     int taille;
+      lirecharacteristique(f, 2,taille);
+       lirecharacteristique(f, 5 ,orgaglobale);//on verifie s'il s'agit d'un fichier contigu ou non
+         lirecharacteristique(f,6,adr);
    if(strcmp(orgaglobale, "chainee")==0){
       struct tblocChaine buffer;
      char orgainterne[51];
-  strcpy(orgainterne, lirecharacteristique());
   fseek(ms, adr*sizeof(buffer), SEEK_SET);
        //verification s'il est ordonne
   // recherche dichotomique
@@ -300,9 +304,6 @@ void  rechercheenregistement(FILE *ms, FILE *f, int id,int adrs[2])){
    }
    else if (strcmp(orgaglobale, "contigue")==0){
   struct tbloc buffer;
-  char orgainterne[51];
-  strcpy(orgainterne, lirecharacteristique());
-  char orgainterne = lirecharacteristique();
   fseek(ms, adr*sizeof(buffer), SEEK_SET);
   //verification s'il est ordonne
   // recherche dichotomique
@@ -354,7 +355,8 @@ void supplogiccontigu(FILE *ms, FILE *f, int id){
     n = adrs[0];
     m= adrs[1];
     recherchecontiguordonne(ms, f,id,adrs);
-   int a = lirecharacteristique();//adresse du premier bloc
+   int a ;
+    lirecharacteristique(f,4,a);//adresse du premier bloc
    fseek(ms, a*sizeof(buffer), SEEK_SET);
    fseek(ms, n*sizeof(buffer), SEEK_CUR);
    buffer.b[m-1].supp =1;
