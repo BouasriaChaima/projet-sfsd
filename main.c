@@ -615,13 +615,121 @@ void lirenregistrements(FILE *ms, FILE *f){
       }
       }
   //fonction de compactage(proposition authomatique en cas d'espace insuffisant
+  // Function to initialize the disk (MS structure)
+void initializeDisk(MS *disk, int nbBlocks) {
+    disk->nb = nbBlocks;
+    disk->nblibre = nbBlocks; // all blocks are free fr now
+
+    for (int i = 0; i < nbBlocks; i++) {
+        disk->m[i].occup = 0;  // mark blocks as free (pas occupied)
+        disk->m[i].NE = 0;     // no entries in the block yet
+        for (int j = 0; j < MAX_FB; j++) {
+            disk->m[i].B[j].id = -1;  // Initialize all entries with -1 (meaning empty)
+            memset(disk->m[i].B[j].nom, 0, 21); // Clear name
+            disk->m[i].B[j].supp = 0;  // Not deleted
+        }
+    }
+    printf("Disk initialized with %d blocks.\n", nbBlocks);
+}
+
+// Function to simulate adding data to a block
+void addDataToBlock(MS *disk, int blockIndex, const tenr *entry) {
+    if (blockIndex >= 0 && blockIndex < disk->nb && disk->m[blockIndex].occup == 0 && disk->m[blockIndex].NE < MAX_FB) {
+        disk->m[blockIndex].B[disk->m[blockIndex].NE] = *entry; // add entry to the block
+        disk->m[blockIndex].NE++;  // increment the number of entries
+        disk->m[blockIndex].occup = 1; // mark block as occupied
+        disk->nblibre--; // decrease the free block count
+    } else {
+        printf("Error: Cannot add data to block %d.\n", blockIndex);
+    }
+}
+
+// Function to defragment the disk
+void defragmentDisk(MS *disk) {
+    int writeIndex = 0; // tracks where to move used blocks
+
+    for (int readIndex = 0; readIndex < disk->nb; readIndex++) {
+        if (disk->m[readIndex].occup == 1) {
+            // move the block if needed
+            if (readIndex != writeIndex) {
+                // copy entries to the write position
+                disk->m[writeIndex] = disk->m[readIndex];
+
+                // mark the old position as free
+                disk->m[readIndex].occup = 0;
+                disk->m[readIndex].NE = 0;  // Reset the number of entries
+                for (int j = 0; j < MAX_FB; j++) {
+                    disk->m[readIndex].B[j].id = -1;  // set ID to -1 (empty)
+                    memset(disk->m[readIndex].B[j].nom, 0, 21); // Clear the name
+                    disk->m[readIndex].B[j].supp = 0;  // Set 'supp' to 0 (not deleted)
+                }
+            }
+            writeIndex++;
+        }
+    }
+
+    printf("Disk defragmentation complete. All used blocks are now contiguous.\n");
+}
+
+// Function to clear all data in the disk (scc memory)
+void clearDisk(MS *disk) {
+    for (int i = 0; i < disk->nb; i++) {
+        disk->m[i].occup = 0;  // Mark the block as free (not occupied)
+        disk->m[i].NE = 0;     // clear all entries in the block
+
+        // clear all entries in the block
+        for (int j = 0; j < MAX_FB; j++) {
+            disk->m[i].B[j].id = -1;  // Set ID to -1 (empty)
+            memset(disk->m[i].B[j].nom, 0, 21); // Clear the name
+            disk->m[i].B[j].supp = 0;  // set 'supp' to 0 (not deleted)
+        }
+    }
+    disk->nblibre = disk->nb; // Reset the free block counter
+    printf("Disk has been cleared. All blocks are now free.\n");
+}
+
+// Function to display the status of the disk
+void displayDiskStatus(MS *disk) {
+    printf("Disk Status:\n");
+    printf("Free Blocks: %d\n", disk->nblibre);
+    printf("Used Blocks: %d\n", disk->nb - disk->nblibre);
+    printf("Blocks:\n");
+
+    for (int i = 0; i < disk->nb; i++) {
+        printf("Block %d: %s\n", i, disk->m[i].occup ? "Used" : "Free");
+        if (disk->m[i].occup) {
+            for (int j = 0; j < disk->m[i].NE; j++) {
+                printf("  Entry %d: ID = %d, Name = %s\n", j, disk->m[i].B[j].id, disk->m[i].B[j].nom);
+            }
+        }
+    }
+}
+
 
 int main(){
 
+MS myDisk;
+    int nbBlocks = 10;  // ex: 10 blocks
+    // Initialize the disk
+    initializeDisk(&myDisk, nbBlocks);
 
+    // simulate adding data
+    tenr entry1 = {1, "File 1", 0};
+    tenr entry2 = {2, "File 2", 0};
+    tenr entry3 = {3, "File 3", 0};
 
+    addDataToBlock(&myDisk, 0, &entry1);
+    addDataToBlock(&myDisk, 2, &entry2);
+    addDataToBlock(&myDisk, 5, &entry3);
 
+    printf("\nBefore Defragmentation:\n");
+    displayDiskStatus(&myDisk);
 
+    // Defragment the disk
+    defragmentDisk(&myDisk);
+
+    printf("\nAfter Defragmentation:\n");
+    displayDiskStatus(&myDisk);
 
     return 0;
 }
