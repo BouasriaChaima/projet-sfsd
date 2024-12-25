@@ -37,6 +37,11 @@ struct MS {
     int nblibre;
     struct tbloc m[];
 };
+struct MSC{
+    int nb;
+    int nblibre;
+    struct tblocChaine *tete;
+};
 typedef struct {
     struct tbloc block[DISK_SIZE]; // Array of blocks
     int freeBlocks;          // Number of free blocks
@@ -228,8 +233,13 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
  }
 
 //function to rename a file
-
-
+void renommerfichier(char *nomfichier, char *nvnom) {
+    if (rename(nomfichier, nvnom) == 0) {
+        printf("File renomme\n");
+    } else {
+        perror("Error \n");
+    }
+}
 
 // recherche d'un enregistrement dans un fichier
 void  recherchenregistement(FILE *ms, FILE *f, int id,int adrs[2]){
@@ -614,7 +624,90 @@ void lirenregistrements(FILE *ms, FILE *f){
                 buffer = buffer->next;
       }
       }
+
   //fonction de compactage(proposition authomatique en cas d'espace insuffisant
+void compactageMS(FILE *ms){
+      int nbrblocs=lireMS;
+      struct ms bufferms;
+       fread(&bufferms, sizeof(bufferms),1,ms);
+      for(int i=0;i<nbrblocs;i++){
+        if(bufferms.m[i].occup=0){
+            bufferms.m[i]=bufferms.m[i+1];
+        }
+      }
+      }
+
+// fonction de chargement du fichier en MS
+void chargementfichier(FILE *ms, FILE *f, FILE *MT){
+    rewind(ms);//placer a la tete
+    char orgaglobale;
+    int nbrblocs;
+    lireMT(f,2,nbrblocs);
+    lireMT(f,5,orgaglobale);
+    if(strcmp(orgaglobale, "contigue")==0){
+        struct MS bufferms;
+        struct tbloc buffer;
+       fread(&bufferms, sizeof(bufferms), 1,ms);
+        if(bufferms.nblibre>nbrblocs){
+            int adrs=0;// si on a suffisamment d'espace
+            for(int j=0;j<bufferms.nb;j++){
+            if(bufferms.m[j].occup==1){// parcourir la MS jusqu'a trouver le premier bloc libre
+            adrs++;
+                }
+            }
+            int bcons=0;
+            for(int j=adrs;j<(bufferms.nb-adrs);j++){
+                if(bufferms.m[j].occup==0){//compter le num des bloc consecutif libre
+                bcons++;
+            }
+            }
+            if(bcons>nbrblocs){//si le num des blocs consecutifs vide est < a l'espace du fichier
+            for(int i=0;i<nbrblocs;i++){
+             fread(&buffer, sizeof(buffer),1,ms);
+                bufferms.m[adrs+i]=buffer;
+               }
+            }
+            else{
+                printf("faire le compactage");
+                compactageMS(ms);// si on a pas des blocs consecutifs libres suffisants on fait le compactage
+                for(int j=0;j<bufferms.nb;j++){
+              if(bufferms.m[j].occup==1){// mm chose parcourir pour trouver la nouvelle adresse du pre bloc libre
+              adrs++;
+                }
+            }
+                for(int i=0;i<nbrblocs;i++){
+             fread(&buffer, sizeof(buffer),1,ms);
+                bufferms.m[adrs+i]=buffer;
+               }// et on fait le chatgement
+            }
+        }
+            else{
+                printf("on doit faire le compactage");
+                compactageMS(ms);// s'il n'ya pas suffisamment des blocs libres on fait juste le compactage
+                // main on charge rien
+            }
+        }
+        else if (strcmp(orgaglobale, "chainee")==0){
+        struct MSC bufferms;
+        struct tbloc buffer;
+       fread(&bufferms, sizeof(bufferms), 1,ms);
+       if(bufferms.nblibre>nbrblocs){// si ona suffisamment d'espace
+             fread(&buffer, sizeof(buffer),1,ms);
+             for(int i=0;i<bufferms.nblibre;i++){
+             if(bufferms.tete.occup==1){// parcourir les pointeurs jusqu'on arrive a un bloc libre
+            bufferms.tete=bufferms.tete.next;
+                }
+                bufferms.tete=buffer;// on met le premier bloc du fichier dans ce pointeur
+                // et it va pointer vert ;es autres blocs du fichier
+             }
+        }
+        else{
+            printf("espace insuffisant");// le compactage sert a rien ici
+        }
+       }
+
+        }
+
   // Function to initialize the disk (MS structure)
 void initializeDisk(MS *disk, int nbBlocks) {
     disk->nb = nbBlocks;
