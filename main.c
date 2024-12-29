@@ -49,12 +49,14 @@ typedef struct {
 
 
 // fonction pour cration de blocs en mode contigue
-void creatBlocContigue( struct tbloc BLOC int numenr){
+void creatBlocContigue( struct tbloc *BLOC , int numenr){
    BLOC->occup = 1 ;
    BLOC->NE = 0 ;
-  for (int i = 0 ; i < numenr -1; i++){
+  for (int i = 0 ; i < numenr ; i++){
     printf("give the id and the name of product number: %d\n" , i+1 );
+    scanf(" give the id:");
     scanf("%d\n" , &BLOC->B[i].id);
+    scanf("give the name:");
     scanf("%s\n", &BLOC->B[i].nom);
     BLOC->B[i].supp = 1 ; // existe
     BLOC->NE++;
@@ -68,7 +70,9 @@ struct tblocChaine *creatBlocChaine (int numenr){
      newBloc->NE = 0;
      for (int i = 0 ; i < numenr ; i++ ){
         printf("give the id and the name of product number: %d\n" , i+1 );
+        scanf(" give the id:");
         scanf("%d\n" , &newBloc->B[i].id);
+        scanf("give the name:");
         scanf("%s\n", &newBloc->B[i].nom);
         newBloc->B[i].supp = 0 ; // existe
         newBloc->NE++;
@@ -135,32 +139,26 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
   struct tblocChaine *currentBlocChainee = NULL;
   struct tMetaD MT;
 
-   printf("give the name of the file \n:");
-   scanf("%s\n" , &nomFichier);
-   strncpy(MT.nomfichier, nomFichier, sizeof(MT.nomfichier));
+  strncpy(MT.nomfichier, nomFichier, sizeof(MT.nomfichier));
 
    // create the file
    FILE *file = fopen(nomFichier , "w");
+   nbrBloc = (nbrEnreg + MAX_FB -1) / MAX_FB;
+   int nbrEdernierBloc = nbrEnreg % MAX_FB;
 
-   printf ("give the number of records \n:");
-   scanf("%d\n" , &nbrEnreg);
-   nbrBloc = nbrEnreg / MAX_FB;
    MT.taillenreg = nbrEnreg;
    MT.tailleblocs = nbrBloc ;
-
-
-   printf ("give the mode of global file creation\n : ");
-   scanf("%d\n" , & choixGlobale);
-
-    printf ("give the mode of intern file creation\n : ");
-    scanf("%d\n" , & choixIntern);
 
     if ( choixGlobale == 0 ){
     // le mode globale = contigue
     strncpy(MT.modeorgaglobale , "contigue" , sizeof(MT.modeorgaglobale));
-        for (int i = 0 ; i < nbrBloc - 1 ; i++ ){
+        for (int i = 0 ; i < nbrBloc ; i++ ){
             printf("creation of bloc %d (contigue)\n" , i+1);
-            creatBlocContigue(&BlocContigue);
+            if (i != nbrBloc -1){
+                creatBlocContigue(&BlocContigue, MAX_FB);
+            }else {
+            creatBlocContigue(&BlocContigue, nbrEdernierBloc);
+            }
             fwrite(&BlocContigue , sizeof(struct tbloc),1 , file);
             if (i == 0) {
                 MT.adrprebloc = (long)&BlocContigue;
@@ -176,10 +174,15 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
     } else if (choixGlobale == 1){
       // le mode globale = chainee
       strncpy(MT.modeorgaglobale , "chainee" , sizeof(MT.modeorgaglobale));
-      for (int i = 0 ; i < nbrBloc - 1; i++){
+      struct tblocChaine *newBloc = NULL;
+      for (int i = 0 ; i < nbrBloc ; i++){
       printf("cration of bloc %d (chainee)\n" , i+1);
       // mode FIFO
-       struct tblocChaine *newBloc = creatBlocChaine();
+      if (i != nbrBloc-1){
+        struct tblocChaine *newBloc = creatBlocChaine(MAX_FB);
+      } else {
+         struct tblocChaine *newBloc = creatBlocChaine(nbrEdernierBloc);
+      }
        if (i == 0){
            MT.adrprebloc = (long)newBloc;
        }
