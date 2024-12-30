@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define MAX_FB 100
+#define MAX_FB 10
 #define DISK_SIZE 100
 #include <string.h>
 
@@ -35,18 +35,8 @@ struct tMetaD{
 struct MS {
     int nb;
     int nblibre;
-    struct tbloc m[];
+    struct tbloc m[DISK_SIZE];
 };
-struct MSC{
-    int nb;
-    int nblibre;
-    struct tblocChaine *tete;
-};
-typedef struct {
-    struct tbloc block[DISK_SIZE]; // Array of blocks
-    int freeBlocks;          // Number of free blocks
-} Disk;
-
 
 // fonction pour cration de blocs en mode contigue
 void creatBlocContigue( struct tbloc *BLOC , int numenr){
@@ -65,7 +55,6 @@ void creatBlocContigue( struct tbloc *BLOC , int numenr){
 // fonction pour creation de blocs en mode chainee
 struct tblocChaine *creatBlocChaine (int numenr){
    struct  tblocChaine *newBloc = (struct tblocChaine *)malloc(sizeof(struct tblocChaine));
-     //if (*newBloc == NULL){}
      newBloc->occup = 1 ;
      newBloc->NE = 0;
      for (int i = 0 ; i < numenr ; i++ ){
@@ -627,7 +616,7 @@ void lirenregistrements(FILE *ms, FILE *f){
                 buffer = buffer->next;
       }
       }
-
+// fonction afficher fichier
   //fonction de compactage(proposition authomatique en cas d'espace insuffisant
 void compactageMS(FILE *ms){
       int nbrblocs=lireMS;
@@ -711,21 +700,55 @@ void chargementfichier(FILE *ms, FILE *f, FILE *MT){
 
         }
 
-  // Function to initialize the disk (MS structure)
-void initializeDisk(MS *disk, int nbBlocks) {
-    disk->nb = nbBlocks;
-    disk->nblibre = nbBlocks; // all blocks are free fr now
+// Function to initialize the disk
+void initializeDisk(MS *disk, Metadata *meta) {
+    // Initialize metadata
+    strcpy(meta->modeorgaglobale, "");  // pas de global organization set yet
+    strcpy(meta->modeorgainterne, ""); // pas de internal organization set yet
+    meta->tailleblocs = sizeof(tblocChaine);
+    meta->taillenreg = sizeof(tenr);
+    meta->adrprebloc = -1;  // No files yet
 
-    for (int i = 0; i < nbBlocks; i++) {
-        disk->m[i].occup = 0;  // mark blocks as free (pas occupied)
-        disk->m[i].NE = 0;     // no entries in the block yet
+    // Initialize secondary memory (blocks)
+    disk->nb = DISK_SIZE;
+    disk->nblibre = DISK_SIZE;
+
+    for (int i = 0; i < DISK_SIZE; i++) {
+        disk->m[i].occup = 0;  // Mmrk block as free
+        disk->m[i].NE = 0;     // No entries in the block
+        disk->m[i].next = NULL; // No chaining initially
+
+        // supp all entries in the block
         for (int j = 0; j < MAX_FB; j++) {
-            disk->m[i].B[j].id = -1;  // Initialize all entries with -1 (meaning empty)
-            memset(disk->m[i].B[j].nom, 0, 21); // Clear name
+            disk->m[i].B[j].id = -1;  // Empty entry
+            memset(disk->m[i].B[j].nom, 0, 21); // supp name
             disk->m[i].B[j].supp = 0;  // Not deleted
         }
     }
-    printf("Disk initialized with %d blocks.\n", nbBlocks);
+    printf("Disk initialized with %d blocks, each of size %lu bytes.\n", DISK_SIZE, sizeof(tblocChaine));
+}
+
+// Function to display metadata
+void displayMetadata(Metadata *meta) {
+    printf("\nMetadata Information:\n");
+    printf("Block Size: %d bytes\n", meta->tailleblocs);
+    printf("Record Size: %d bytes\n", meta->taillenreg);
+    printf("First Block Address: %d\n", meta->adrprebloc);
+    printf("Global Organization Mode: %s\n", strlen(meta->modeorgaglobale) ? meta->modeorgaglobale : "Not set");
+    printf("Internal Organization Mode: %s\n", strlen(meta->modeorgainterne) ? meta->modeorgainterne : "Not set");
+}
+
+// Function to display the current state of the disk
+void displayDiskStatus(MS *disk) {
+    printf("\nDisk Status:\n");
+    printf("Total Blocks: %d\n", disk->nb);
+    printf("Free Blocks: %d\n", disk->nblibre);
+    printf("Used Blocks: %d\n", disk->nb - disk->nblibre);
+    printf("Blocks:\n");
+
+    for (int i = 0; i < DISK_SIZE; i++) {
+        printf("Block %d: %s\n", i, disk->m[i].occup ? "Used" : "Free");
+    }
 }
 
 // Function to simulate adding data to a block
@@ -740,69 +763,247 @@ void addDataToBlock(MS *disk, int blockIndex, const tenr *entry) {
     }
 }
 
-// Function to defragment the disk
-void defragmentDisk(MS *disk) {
-    int writeIndex = 0; // tracks where to move used blocks
+// Function to clear all data from the disk
+void clearDisk(MS *disk, Metadata *meta) {
+    // Reset all blocks to their initial state
+    for (int i = 0; i < disk->nb; i++) {
+        disk->m[i].occup = 0;  // Mark block free
+        disk->m[i].NE = 0;     // Reset nbr of entries
+        disk->m[i].next = NULL; // Remove chaining
 
-    for (int readIndex = 0; readIndex < disk->nb; readIndex++) {
-        if (disk->m[readIndex].occup == 1) {
-            // move the block if needed
-            if (readIndex != writeIndex) {
-                // copy entries to the write position
-                disk->m[writeIndex] = disk->m[readIndex];
-
-                // mark the old position as free
-                disk->m[readIndex].occup = 0;
-                disk->m[readIndex].NE = 0;  // Reset the number of entries
-                for (int j = 0; j < MAX_FB; j++) {
-                    disk->m[readIndex].B[j].id = -1;  // set ID to -1 (empty)
-                    memset(disk->m[readIndex].B[j].nom, 0, 21); // Clear the name
-                    disk->m[readIndex].B[j].supp = 0;  // Set 'supp' to 0 (not deleted)
-                }
-            }
-            writeIndex++;
+        // Clear all entries in the block
+        for (int j = 0; j < MAX_FB; j++) {
+            disk->m[i].B[j].id = -1;  // Empty entry
+            memset(disk->m[i].B[j].nom, 0, 21); // Clear name
+            disk->m[i].B[j].supp = 0;  // Not deleted
         }
     }
 
+    // Reset meta data
+    disk->nblibre = disk->nb;
+    strcpy(meta->modeorgaglobale, "");  // Re set global organization mode
+    strcpy(meta->modeorgainterne, ""); // Re set internal organization mode
+    meta->adrprebloc = -1;  // Re set address of the first block
+
+    printf("All data has been cleared. The disk is now empty.\n");
+}
+
+// Function to defragment the disk
+void defragmentDisk(MS *disk, Metadata *meta) {
+    int writeIndex = 0; // position for the next used block
+    int freeCount = 0;
+
+    for (int readIndex = 0; readIndex < disk->nb; readIndex++) {
+        if (disk->m[readIndex].occup == 1) { // If the block is used
+            if (readIndex != writeIndex) {
+                // Move the block data to the write position
+                disk->m[writeIndex] = disk->m[readIndex];
+
+                // Clear the old block
+                disk->m[readIndex].occup = 0;
+                disk->m[readIndex].NE = 0;
+                disk->m[readIndex].next = NULL;
+
+                for (int j = 0; j < MAX_FB; j++) {
+                    disk->m[readIndex].B[j].id = -1;
+                    memset(disk->m[readIndex].B[j].nom, 0, 21);
+                    disk->m[readIndex].B[j].supp = 0;
+                }
+            }
+
+            // Update chaining for chained organization
+            if (strcmp(meta->modeorgaglobale, "Chained") == 0) {
+                if (writeIndex > 0) {
+                    disk->m[writeIndex - 1].next = &disk->m[writeIndex];
+                }
+                disk->m[writeIndex].next = NULL; // last block in the chain
+            }
+
+            writeIndex++;
+        } else {
+            freeCount++;
+        }
+    }
+
+    // update metadata
+    disk->nblibre = freeCount;
     printf("Disk defragmentation complete. All used blocks are now contiguous.\n");
 }
 
-// Function to clear all data in the disk (scc memory)
-void clearDisk(MS *disk) {
-    for (int i = 0; i < disk->nb; i++) {
-        disk->m[i].occup = 0;  // Mark the block as free (not occupied)
-        disk->m[i].NE = 0;     // clear all entries in the block
-
-        // clear all entries in the block
-        for (int j = 0; j < MAX_FB; j++) {
-            disk->m[i].B[j].id = -1;  // Set ID to -1 (empty)
-            memset(disk->m[i].B[j].nom, 0, 21); // Clear the name
-            disk->m[i].B[j].supp = 0;  // set 'supp' to 0 (not deleted)
-        }
-    }
-    disk->nblibre = disk->nb; // Reset the free block counter
-    printf("Disk has been cleared. All blocks are now free.\n");
-}
-
-// Function to display the status of the disk
-void displayDiskStatus(MS *disk) {
-    printf("Disk Status:\n");
-    printf("Free Blocks: %d\n", disk->nblibre);
-    printf("Used Blocks: %d\n", disk->nb - disk->nblibre);
-    printf("Blocks:\n");
+// Function to update metadata
+void updateMetadata(MS *disk, Metadata *meta) {
+    int freeCount = 0, usedCount = 0, firstBlock = -1;
 
     for (int i = 0; i < disk->nb; i++) {
-        printf("Block %d: %s\n", i, disk->m[i].occup ? "Used" : "Free");
-        if (disk->m[i].occup) {
-            for (int j = 0; j < disk->m[i].NE; j++) {
-                printf("  Entry %d: ID = %d, Name = %s\n", j, disk->m[i].B[j].id, disk->m[i].B[j].nom);
+        if (disk->m[i].occup == 0) {
+            freeCount++;
+        } else {
+            usedCount++;
+            if (firstBlock == -1) {
+                firstBlock = i;  // capture the address of the first used block
             }
         }
+    }
+
+    // Update metadata fields
+    disk->nblibre = freeCount;
+    meta->adrprebloc = firstBlock;
+    printf("\nMetadata Updated:\n");
+    printf("Free Blocks: %d\n", freeCount);
+    printf("Used Blocks: %d\n", usedCount);
+    printf("First Block Address: %d\n", firstBlock);
+}
+
+// Function to check if there are enough free blocks
+int checkFreeBlocks(MS *disk, int requiredBlocks) {
+    if (disk->nblibre >= requiredBlocks) {
+        return 1; // enough blocks available
+    } else {
+        printf("Error: Not enough free blocks. Required: %d, Available: %d.\n", requiredBlocks, disk->nblibre);
+        return 0; // insufficient free blocks
+    }
+}
+
+// Function to simulate adding data to a block
+void addDataToBlock(MS *disk, int blockIndex, const char *fileName, Metadata *meta) {
+    if (blockIndex >= 0 && blockIndex < disk->nb && disk->m[blockIndex].occup == 0) {
+        disk->m[blockIndex].occup = 1;
+        disk->m[blockIndex].NE = 1;  // Ex : 1 entry added
+        strncpy(disk->m[blockIndex].B[0].nom, fileName, 20);
+        disk->m[blockIndex].B[0].id = blockIndex;
+        disk->m[blockIndex].B[0].supp = 0;
+
+        printf("Data added to Block %d.\n", blockIndex);
+
+        // update metadata after the operation
+        updateMetadata(disk, meta);
+    } else {
+        printf("Error: Block %d is already occupied or out of bounds.\n", blockIndex);
     }
 }
 
 
 int main(){
+    int choice; int id;
+    struct MS ms;
+    struct tMetaD meta;
+
+    printf("Bienvenue dans le Système de Gestion de Fichiers (SGF)");
+    printf("\n--------------------------------------------------------------");
+    printf("    1.Initialiser la memoire secondaire    2. creer un fichier + le charger dans la MS \n").
+    printf("    3.Afficher la memeoire secondaire      4.Aficher les metadonees                    \n");
+    printf("    5.Recherche d'un enregistrement        6.Inserer un enregistrement                  \n");
+    printf("    7.Supprimer un enregistrement (loqique/ physique) \n ");
+    printf("    8.Defragmenter un fichier              9.Supprimer un fichier \n");
+    printf("    10.Renommer un fichier                 11.Compactage de la memoire secondaire \n");
+    printf("    12.Vider la memoire secondaire         13.Quitter le programe  \n");
+    printf("\n--------------------------------------------------------------");
+    printf("Veuillez sélectionner la fonction que vous souhaitez exécuter. (1-13)");
+    scanf("%d", &choice);
+
+    switch(choice){
+    case 1:{
+        printf ("Initialisation de la memoire secondaire\n");
+        initializeDisk(&ms,&meta);
+    } break;
+    case 2: {
+        int nbrEnreg; int choixGlobale; int choixIntern ; char nomFichier[51];
+        printf("cration de fichier\n");
+        printf("donnez le nom de fichier");
+        scanf("%s",&nomFichier);
+        printf("\n");
+        printf("donner le nombre d'enregistrement");
+        scanf("%d",&nbrEnreg);
+        printf("\n");
+        printf ("donner le choix d'organisation globale (0 pour contigue / 1 pour chainee");
+        scanf("%d", &choixGlobale);
+        printf("\n");
+        printf("donner le choix d'organisation interne ( 0 pour trier / 1 pour non trier");
+        scanf("%d", &choixIntern);
+        CreeFichier(nomFichier, nbrEnreg,choixGlobale ,choixIntern);
+         break;
+         }
+        case 3:{
+           printf("affichage de la memoire secondaire\n");
+           // affichage graphique
+           break;
+        }
+        case 4:{
+            printf("affichage des metadonees\n");
+            displayMetadata(&meta);
+            break;
+        }case 5:{
+            int resultat [2];
+            printf("Recherche d'un enregistrement\n");
+            printf("donner le id");
+            scanf ("%d", &id);
+            recherchenregistement(ms, f , id , resultat );
+            printf("\n");
+            break;
+        }case 6:{
+           printf("Insertion d'un enregistrement");
+           insertion(ms,f);
+           printf("\n");
+           break;
+        } case 7:{
+            int choice2;
+            printf("Suppression d'un enrigistrement\n");
+            printf("entrer 1 pour la suppression logique et 2 pour la suppression phisique");
+            scanf("%d", &choice2);
+            switch(choice2){
+             case 1:{
+               printf("suppression logique");
+               printf("donner le id");
+               scanf("%d", &id);
+               supprlogique(ms , f , id);
+               break;
+             } case 2: {
+                printf("suppression physique");
+                printf("donner le id");
+                scanf("%d", &id);
+                supprphysique(ms , f , id);
+                break;
+             }
+            }
+            break;
+          }case 8:{
+            printf("defragmenter un fichier");
+            //fonction
+            break;
+          } case 9: {
+           printf("Supprimer un fichier");
+           //fonction de suppression
+           break;
+          } case 10:{
+              char oldFileName [51]; char newFileName [51];
+            printf("renommer un fichier");
+            rename(oldFileName, newFileName);
+            break;
+          } case 11:{
+           printf("compactage de la memoire secondaire");
+           compactageMS(ms);
+           break;
+          } case 12:{
+            printf("vider la memeoire secondaire");
+            // fonction
+            break;
+          } case 13:{
+            printf("quitter le programme");
+            //fonction
+            break;
+          }
+    }
+
+
+
+ /*  // testing creerFichier
+   char nomFichier [51] = "testFile.dat";
+   int nbrEnreg = 3;
+   int choixglobale = 0; // contigue
+   int choixintern = 1 ; //unsorted
+
+   printf("testing creatFichier function\n");
+   CreeFichier(nomFichier,nbrEnreg, choixglobale , choixintern);
 
 MS myDisk;
     int nbBlocks = 10;  // ex: 10 blocks
@@ -825,7 +1026,7 @@ MS myDisk;
     defragmentDisk(&myDisk);
 
     printf("\nAfter Defragmentation:\n");
-    displayDiskStatus(&myDisk);
+    displayDiskStatus(&myDisk); */
 
     return 0;
 }
