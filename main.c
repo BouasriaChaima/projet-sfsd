@@ -201,14 +201,14 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
 }
 //initialisation de la MS
 void initialiserMS(struct MS *ms) {
-    ms.nb = DISK_SIZE;
-    ms.nblibre = DISK_SIZE;
+    ms->nb = DISK_SIZE;
+    ms->nblibre = DISK_SIZE;
 
     for (int i = 0; i < DISK_SIZE; i++) {
-        ms.m[i].occup = 0;
-        ms.m[i].NE = 0;
+        ms->m[i].occup = 0;
+        ms->m[i].NE = 0;
         for (int j = 0; j < MAX_FB; j++) {
-            ms.m[i].B[j].supp = 0;
+            ms->m[i].B[j].supp = 0;
         }
     }
     printf("Memoire secondaire initialisee avec succes.\n");
@@ -216,11 +216,11 @@ void initialiserMS(struct MS *ms) {
 //l'affichage de la MS
 void afficherEtatMS(struct MS *ms) {
     printf("\n=== les blocs de la Memoire Secondaire ===\n");
-    for (int i = 0; i < ms.nb; i++) {
-        if (ms.m[i].occup == 0) {
+    for (int i = 0; i < ms->nb; i++) {
+        if (ms->m[i].occup == 0) {
             printf(GREEN"{Libre}"RESET);
         } else {
-            printf(RED"{%d }"RESET, ms.m[i].NE);
+            printf(RED"{%d }"RESET, ms->m[i].NE);
         }
 
         if (i  % 10 == 0) {
@@ -261,22 +261,22 @@ void afficherEtatMS(struct MS *ms) {
      fread(&meta, sizeof(struct tMetaD),1,f);
     switch(nc) {
         case 1: // file name
-            strncpy(metadata.nomfichier, (char*)newValue, 50);
+            strncpy(meta.nomfichier, (char*)newValue, 50);
             break;
         case 2: // size in blocks
-            metadata.tailleblocs = *(int*)newValue;
+            meta.tailleblocs = *(int*)newValue;
             break;
         case 3: //size in records
-            metadata.taillenreg = *(int*)newValue;
+            meta.taillenreg = *(int*)newValue;
             break;
         case 4: // first block address
-            metadata.adrprebloc = *(long*)newValue;
+            meta.adrprebloc = *(long*)newValue;
             break;
         case 5: // global organization mode
-            strncpy(metadata.modeorgaglobale, (char*)newValue, 50);
+            strncpy(meta.modeorgaglobale, (char*)newValue, 50);
             break;
         case 6: // internal organization mode
-            strncpy(metadata.modeorgainterne, (char*)newValue, 50);
+            strncpy(meta.modeorgainterne, (char*)newValue, 50);
             break;
     }
 
