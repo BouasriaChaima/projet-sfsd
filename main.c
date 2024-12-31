@@ -797,6 +797,54 @@ void suppfichier( char *nomfichier,char *nomfichierMT) {
         printf("fichier supprime");
     }
 }
+
+// Function to defragment a specific file
+void defragmentFile(MS *disk, Metadata *meta, const char *fileName) {
+int writeIndex = 0; // Position for the next used block
+int found = 0;
+
+for (int readIndex = 0; readIndex < disk->nb; readIndex++) {
+    if (disk->m[readIndex].occup == 1) { // If the block is used
+        //checki,g if the block belongs to the specified file
+        for (int j = 0; j < disk->m[readIndex].NE; j++) {
+            if (strcmp(disk->m[readIndex].B[j].nom, fileName) == 0) {
+                found = 1;
+                if (readIndex != writeIndex) {
+                    // move the block data to the write position
+                    disk->m[writeIndex] = disk->m[readIndex];
+
+                    // supp the old block
+                    disk->m[readIndex].occup = 0;
+                    disk->m[readIndex].NE = 0;
+                    disk->m[readIndex].next = NULL;
+
+                    for (int k = 0; k < MAX_FB; k++) {
+                        disk->m[readIndex].B[k].id = -1;
+                        memset(disk->m[readIndex].B[k].nom, 0, 21);
+                        disk->m[readIndex].B[k].supp = 0;
+                    }
+                }
+
+                if (strcmp(meta->modeorgaglobale, "Chained") == 0) {
+                    if (writeIndex > 0) {
+                        disk->m[writeIndex - 1].next = &disk->m[writeIndex];
+                    }
+                    disk->m[writeIndex].next = NULL; //lst block in the chain
+                }
+
+                writeIndex++;
+                break; //,move to the next block
+            }
+        }
+    }
+}
+
+if (found) {
+    printf("File %s defragmented successfully.\n", fileName);
+} else {
+    printf("File %s not found.\n", fileName);
+}
+
 // Function to initialize the disk
 void initializeDisk(struct MS *disk, struct tMetaD *meta) {
     // Initialize metadata
@@ -825,14 +873,21 @@ void initializeDisk(struct MS *disk, struct tMetaD *meta) {
     printf("Disk initialized with %d blocks, each of size %lu bytes.\n", DISK_SIZE, sizeof(tblocChaine));
 }
 
-// Function to display metadata
+// Function to display metadata in a tabular format (genre un tableau ASCII)
 void displayMetadata(Metadata *meta) {
-    printf("\nMetadata Information:\n");
-    printf("Block Size: %d bytes\n", meta->tailleblocs);
-    printf("Record Size: %d bytes\n", meta->taillenreg);
-    printf("First Block Address: %d\n", meta->adrprebloc);
-    printf("Global Organization Mode: %s\n", strlen(meta->modeorgaglobale) ? meta->modeorgaglobale : "Not set");
-    printf("Internal Organization Mode: %s\n", strlen(meta->modeorgainterne) ? meta->modeorgainterne : "Not set");
+    printf("\n+-----------------------------------------+\n");
+    printf("|              Metadata Table             |\n");
+    printf("+-----------------------------------------+\n");
+    printf("| %-20s | %-20s |\n", "Attribute", "Value");
+    printf("+-----------------------------------------+\n");
+    printf("| %-20s | %-20d |\n", "Block Size", meta->tailleblocs);
+    printf("| %-20s | %-20d |\n", "Record Size", meta->taillenreg);
+    printf("| %-20s | %-20d |\n", "First Block Address", meta->adrprebloc);
+    printf("| %-20s | %-20s |\n", "Global Organization",
+           strlen(meta->modeorgaglobale) ? meta->modeorgaglobale : "Not set");
+    printf("| %-20s | %-20s |\n", "Internal Organization",
+           strlen(meta->modeorgainterne) ? meta->modeorgainterne : "Not set");
+    printf("+-----------------------------------------+\n");
 }
 
 // Function to display the current state of the disk
@@ -943,7 +998,7 @@ void updateMetadata(MS *disk, Metadata *meta) {
     }
 
     // Update metadata fields
-    disk->nblibre = freeCount;
+        disk->nblibre = freeCount;
     meta->adrprebloc = firstBlock;
     printf("\nMetadata Updated:\n");
     printf("Free Blocks: %d\n", freeCount);
@@ -961,103 +1016,86 @@ int checkFreeBlocks(MS *disk, int requiredBlocks) {
     }
 }
 
-// Function to simulate adding data to a block
-void addDataToBlock(MS *disk, int blockIndex, const char *fileName, Metadata *meta) {
-    if (blockIndex >= 0 && blockIndex < disk->nb && disk->m[blockIndex].occup == 0) {
-        disk->m[blockIndex].occup = 1;
-        disk->m[blockIndex].NE = 1;  // Ex : 1 entry added
-        strncpy(disk->m[blockIndex].B[0].nom, fileName, 20);
-        disk->m[blockIndex].B[0].id = blockIndex;
-        disk->m[blockIndex].B[0].supp = 0;
-
-        printf("Data added to Block %d.\n", blockIndex);
-
-        // update metadata after the operation
-        updateMetadata(disk, meta);
-    } else {
-        printf("Error: Block %d is already occupied or out of bounds.\n", blockIndex);
-    }
-}
-
-
 int main(){
     int choice; int id;
     struct MS ms;
     struct tMetaD meta;
 
-    printf("Bienvenue dans le Système de Gestion de Fichiers (SGF)");
+    do {
+           printf("Welcome to file management system\n");
     printf("\n--------------------------------------------------------------");
-    printf("    1.Initialiser la memoire secondaire    2. creer un fichier + le charger dans la MS \n").
-    printf("    3.Afficher la memeoire secondaire      4.Aficher les metadonees                    \n");
-    printf("    5.Recherche d'un enregistrement        6.Inserer un enregistrement                  \n");
-    printf("    7.Supprimer un enregistrement (loqique/ physique) \n ");
-    printf("    8.Defragmenter un fichier              9.Supprimer un fichier \n");
-    printf("    10.Renommer un fichier                 11.Compactage de la memoire secondaire \n");
-    printf("    12.Vider la memoire secondaire         13.Quitter le programe  \n");
+    printf("    1.Initialize the secondary memory    2. Create a file + load it in SM \n");
+    printf("    3.Display the secondary memory       4.Dsiplay the metadata           \n");
+    printf("    5.Search for a record                6.Insert a record                \n");
+    printf("    7.Delete a record (logical/physical)  \n ");
+    printf("    8.Defragment a file                  9.Delete a file \n");
+    printf("    10.Rename a file                     11.Compact the secondary memory \n");
+    printf("    12.Empty the secondary memory        13.Exit the program  \n");
     printf("\n--------------------------------------------------------------");
-    printf("Veuillez sélectionner la fonction que vous souhaitez exécuter. (1-13)");
+    printf("Please select the function you want to perform (1-13)");
     scanf("%d", &choice);
 
     switch(choice){
     case 1:{
-        printf ("Initialisation de la memoire secondaire\n");
+        printf ("Initialize the secondary memory\n");
         initializeDisk(&ms,&meta);
     } break;
     case 2: {
         int nbrEnreg; int choixGlobale; int choixIntern ; char nomFichier[51];
-        printf("cration de fichier\n");
-        printf("donnez le nom de fichier");
+        printf("Create a file \n");
+        printf("Enter the name of the file");
         scanf("%s",&nomFichier);
         printf("\n");
-        printf("donner le nombre d'enregistrement");
+        printf("Enter the number of the records");
         scanf("%d",&nbrEnreg);
         printf("\n");
-        printf ("donner le choix d'organisation globale (0 pour contigue / 1 pour chainee");
+        printf ("Enter the global mode of organization  (0 for contiguous / 1 for linked )");
         scanf("%d", &choixGlobale);
         printf("\n");
-        printf("donner le choix d'organisation interne ( 0 pour trier / 1 pour non trier");
+        printf("Enter the intern mode of organization ( 0 for sorted / 1 for unsorted");
         scanf("%d", &choixIntern);
         CreeFichier(nomFichier, nbrEnreg,choixGlobale ,choixIntern);
+        chargementfichier(ms , f ,metaf);
          break;
          }
         case 3:{
-           printf("affichage de la memoire secondaire\n");
+           printf("Display the secondary memory\n");
+           //affichage graphique
            afficherEtatMS(&ms);
-           // affichage graphique
            break;
         }
         case 4:{
-            printf("affichage des metadonees\n");
+            printf("Display the metadat\n");
             displayMetadata(&meta);
             break;
         }case 5:{
             int resultat [2];
-            printf("Recherche d'un enregistrement\n");
-            printf("donner le id");
+            printf("Search a record\n");
+            printf("Give the id");
             scanf ("%d", &id);
             recherchenregistement(ms, f , id , resultat );
             printf("\n");
             break;
         }case 6:{
-           printf("Insertion d'un enregistrement");
+           printf("Insert a record\n");
            insertion(ms,f);
            printf("\n");
            break;
         } case 7:{
             int choice2;
-            printf("Suppression d'un enrigistrement\n");
-            printf("entrer 1 pour la suppression logique et 2 pour la suppression phisique");
+            printf("Delete a record\n");
+            printf("Enter 1 for logical deletion and 2 for the physical deletion\n");
             scanf("%d", &choice2);
             switch(choice2){
              case 1:{
-               printf("suppression logique");
-               printf("donner le id");
+               printf("Logical deletion\n");
+               printf("give the id");
                scanf("%d", &id);
                supprlogique(ms , f , id);
                break;
              } case 2: {
-                printf("suppression physique");
-                printf("donner le id");
+                printf("Physical deletion");
+                printf("give the id");
                 scanf("%d", &id);
                 supprphysique(ms , f , id);
                 break;
@@ -1065,34 +1103,47 @@ int main(){
             }
             break;
           }case 8:{
-            printf("defragmenter un fichier");
-            //fonction
+            printf("Defragmentation of a file\n");
+            char fileName [51];
+            printf("Give the file name");
+            scanf("%s", &fileName);
+            defragmentFile(&ms , &meta, fileName);
             break;
           } case 9: {
-           printf("Supprimer un fichier");
-           //fonction de suppression
+           printf("File deletion\n");
+           char fileName [51];
+           char metaName [55] ;
+           printf("Give the name of the file");
+           scanf("%s", fileName);
+           strcpy(metaName, "meta");
+           strcat(metaName, fileName);
+           suppfichier(fileName, metaName);
            break;
           } case 10:{
               char oldFileName [51]; char newFileName [51];
-            printf("renommer un fichier");
+            printf("Rename a file\n");
+            printf("Give the name of the file");
+            scanf("%s", &oldFileName);
+            printf("Give the new name");
+            scanf("%s", &newFileName);
             rename(oldFileName, newFileName);
             break;
           } case 11:{
-           printf("compactage de la memoire secondaire");
+           printf("Compacting the secondary memory");
            compactageMS(ms);
            break;
           } case 12:{
-            printf("vider la memeoire secondaire");
+            printf("Empty the secondary memory");
             // fonction
             break;
           } case 13:{
-            printf("quitter le programme");
-            //fonction
+            printf("Exit the program\n");
             break;
           }
+          default:
+          printf("Ivalid choice\n");
     }
-
-
+    }while(choice!=13);
 
  /*  // testing creerFichier
    char nomFichier [51] = "testFile.dat";
