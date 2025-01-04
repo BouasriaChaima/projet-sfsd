@@ -166,6 +166,7 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
             } else {
               strncpy(MT.modeorgainterne , "non trier" , sizeof(MT.modeorgainterne));
             }
+            fwrite(newBloc , sizeof( struct tbloc), 1 ,file);
         }
     } else if (choixGlobale == 1){
       // le mode globale = chainee
