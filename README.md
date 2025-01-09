@@ -1,6 +1,7 @@
 Guide d'Utilisation du Simulateur de Gestion Simplifiée de Fichiers (SGF
                
 Bienvenue dans le simulateur de gestion simplifiée de fichiers (SGF). Ce document vous guide pour comprendre et utiliser les fonctionnalités principales du programme.
+
 Prérequis
 Un compilateur C (comme GCC ou Clang) pour compiler le code.
 Un terminal ou une interface IDE pour exécuter le programme.
