@@ -134,7 +134,7 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
   struct tblocChaine *headBlocChainee = NULL ;
   struct tblocChaine *currentBlocChainee = NULL;
   struct tMetaD MT;
-
+   struct tbloc newBloc ;
   strncpy(MT.nomfichier, nomFichier, sizeof(MT.nomfichier));
 
    // create the file
@@ -166,7 +166,7 @@ void CreeFichier (char nomFichier [51] , int nbrEnreg , int choixGlobale , int c
             } else {
               strncpy(MT.modeorgainterne , "non trier" , sizeof(MT.modeorgainterne));
             }
-            fwrite(newBloc , sizeof( struct tbloc), 1 ,file);
+            fwrite(&newBloc , sizeof( struct tbloc), 1 ,file);
         }
     } else if (choixGlobale == 1){
       // le mode globale = chainee
@@ -216,7 +216,7 @@ void initialiserMS(struct MS *ms) {
             ms->m[i].B[j].supp = 0;
         }
     }
-    printf("Memoire secondaire initialisee avec succes.\n");
+    printf("Memoire secondaire initialisee avec succe.\n");
 }
 //l'affichage de la MS
 void afficherEtatMS(struct MS *ms) {
@@ -298,6 +298,8 @@ void renommerfichier(char *nomfichier, char *nvnom) {
 void rechercheEnregistrement(FILE *ms, FILE *f, int id, int adrs[2]) {
     char orgGlobale[51], orgInterne[51];
     int numBloc = 1, adr, taille;
+    adrs[0] =-1;// element non trouve
+     adrs[1] = -1;
 
     lireMT(f, 4, &adr); // adresse du premier bloc
     lireMT(f, 2, &taille);  // nombre des blocs ds le fichier
@@ -352,9 +354,15 @@ void rechercheEnregistrement(FILE *ms, FILE *f, int id, int adrs[2]) {
                         adrs[1] = milieu + 1;
                         return;
                     }
-                    if (buffer.B[milieu].id < id) debut = milieu + 1;
-                    else fin = milieu - 1;
+
+                    if (buffer.B[milieu].id < id) {
+                            debut = milieu + 1;
+                    }
+                    else{
+                        fin = milieu - 1;
+                    }
                 }
+
             } else if (buffer.occup == 1) {
                 for (int j = 0; j < buffer.NE; j++) {
                     if (buffer.B[j].id == id && buffer.B[j].supp == 0) {
@@ -367,9 +375,6 @@ void rechercheEnregistrement(FILE *ms, FILE *f, int id, int adrs[2]) {
             numBloc++;
         }
     }
-
-    adrs[0] =-1;// element non trouve
-     adrs[1] = -1;
 }
 //suppression logique
 void supprlogique(FILE *ms, FILE *f, int id) {
@@ -477,25 +482,25 @@ void insertion(FILE *ms, FILE *f) {
     scanf(" %[^\n]", newenr.nom);
     char orgaglobale[51];
     char orgainterne[51];
-    lireMT(f, 6, orgainterne); // Read internal organization
-    lireMT(f, 5, orgaglobale); // Read global organization
+    lireMT(f, 6, orgainterne);
+    lireMT(f, 5, orgaglobale);
     if (strcmp(orgaglobale, "contigue") == 0) {
         struct tbloc buffer;
-        if (strcmp(orgainterne, "non trier") == 0) { // Unsorted
+        if (strcmp(orgainterne, "non trier") == 0) {
             fread(&buffer, sizeof(struct tbloc), 1, ms);
             int adrdernier = (a + taille) - 1;
-            fseek(ms, adrdernier * sizeof(struct tbloc), SEEK_SET); // Move to the last block
-            if (buffer.NE < MAX_FB) { // Space available in the block
+            fseek(ms, adrdernier * sizeof(struct tbloc), SEEK_SET);
+            if (buffer.NE < MAX_FB) {
                 buffer.B[buffer.NE].id = newenr.id;
                 strcpy(buffer.B[buffer.NE].nom, newenr.nom);
                 buffer.B[buffer.NE].supp = 0;
                 buffer.NE++;
-                fseek(ms, -sizeof(struct tbloc), SEEK_CUR); // Move back to write
+                fseek(ms, -sizeof(struct tbloc), SEEK_CUR);
                 fwrite(&buffer, sizeof(struct tbloc), 1, ms);
                 int nve;
                 lireMT(f, 3, &nve);
-                majmeta(f, 3, nve + 1); // Update the record count
-            } else { // No space available, allocate a new block
+                majmeta(f, 3, nve + 1);
+            } else {
                 struct tbloc buffer2;
                 creatBlocContigue(&buffer2, 1);
                 buffer2.B[0].id = newenr.id;
@@ -508,15 +513,15 @@ void insertion(FILE *ms, FILE *f) {
                 int nve;
                 lireMT(f, 3, &nve);
                 majmeta(f, 3, nve + 1);
-                majmeta(f, 2, taille + 1); // Update file size
+                majmeta(f, 2, taille + 1);
             }
-        } else { // Sorted file
+        } else {
             int j;
             for (int i = 0; i < taille; i++) {
                 fseek(ms, (a + i) * sizeof(struct tbloc), SEEK_SET);
                 fread(&buffer, sizeof(struct tbloc), 1, ms);
 
-                for (j = 0; j < buffer.NE; j++) { // Find insertion point
+                for (j = 0; j < buffer.NE; j++) {
                     if (newenr.id < buffer.B[j].id) {
                         break;
                     }
@@ -526,7 +531,7 @@ void insertion(FILE *ms, FILE *f) {
                     for (int k = buffer.NE; k > j; k--) {
                         buffer.B[k] = buffer.B[k - 1];
                     }
-                    buffer.B[j] = newenr; // Insert
+                    buffer.B[j] = newenr;
                     buffer.NE++;
                     fseek(ms, (a + i) * sizeof(struct tbloc), SEEK_SET);
                     fwrite(&buffer, sizeof(struct tbloc), 1, ms);
@@ -538,7 +543,7 @@ void insertion(FILE *ms, FILE *f) {
                 }
             }
 
-            struct tbloc newBlock; // If no space found, allocate new block
+            struct tbloc newBlock;
             newBlock.NE = 1;
             newBlock.B[0] = newenr;
             fseek(ms, (a + taille) * sizeof(struct tbloc), SEEK_SET);
@@ -547,19 +552,16 @@ void insertion(FILE *ms, FILE *f) {
             int nve;
             lireMT(f, 3, &nve);
             majmeta(f, 3, nve + 1);
-            majmeta(f, 2, taille + 1); // Update file size
+            majmeta(f, 2, taille + 1);
         }
     } else if(strcmp(orgaglobale, "chainee") == 0) {
         struct tblocChaine *buffer, *buffer2;
-        fseek(ms, a * sizeof(struct tblocChaine), SEEK_SET); // Start reading from the first block
+        fseek(ms, a * sizeof(struct tblocChaine), SEEK_SET);
         fread(&buffer, sizeof(struct tblocChaine), 1, ms);
-        if (strcmp(orgainterne, "non trier") == 0) { // Unsorted chained blocks
-            // Traverse until the end of the chain to insert at the last position
+        if (strcmp(orgainterne, "non trier") == 0) {
             while (buffer->next != NULL) {
-                buffer = buffer->next; // Move to the next block
+                buffer = buffer->next;
             }
-
-            // If space is available in the last block, insert the record
             if (buffer->NE < MAX_FB) {
                 buffer->B[buffer->NE].id = newenr.id;
                 strcpy(buffer->B[buffer->NE].nom, newenr.nom);
@@ -567,7 +569,6 @@ void insertion(FILE *ms, FILE *f) {
                 buffer->NE++;
                 fwrite(buffer, sizeof(struct tblocChaine), 1, ms);
 
-                // Update meta data
                 int nve;
                 lireMT(f, 3, &nve);
                 majmeta(f, 3, nve + 1);
@@ -577,57 +578,45 @@ void insertion(FILE *ms, FILE *f) {
                 newBlock->B[0].id = newenr.id;
                 strcpy(newBlock->B[0].nom, newenr.nom);
                 newBlock->B[0].supp = 0;
-                // Update the last block's next pointer to point to the new block
                 buffer->next = &newBlock;
 
                 fwrite(&newBlock, sizeof(struct tblocChaine), 1, ms);
-
-                // Update meta data
                 int nve;
                 lireMT(f, 3, &nve);
                 majmeta(f, 3, nve + 1);
-                majmeta(f, 2, taille + 1); // Update file size
+                majmeta(f, 2, taille + 1);
             }
-        } else if (strcmp(orgainterne, "trier") == 0) { // Sorted chained blocks
-            struct tblocChaine *prevBuffer = NULL; // Pointer to previous block
+        } else if (strcmp(orgainterne, "trier") == 0) {
+            struct tblocChaine *prevBuffer = NULL;
             int insertionPointFound = 0;
-            // Traverse the chain to find the correct position to insert the new record
-            while (buffer != NULL && !insertionPointFound) {
+            while (buffer != NULL && insertionPointFound!=1) {
                 for (int i = 0; i < buffer->NE; i++) {
                     if (buffer->B[i].id > newenr.id) {
                         insertionPointFound = 1;
-                        break; // Found the insertion point
+                        break;
                     }
                 }
 
-                // If the insertion point is found, insert the record into the current block
                 if (insertionPointFound) {
                     if (buffer->NE < MAX_FB) {
                             int i;
-                        for (i = buffer->NE; i > i; i--) {
-                            buffer->B[i] = buffer->B[i - 1];
+                        for (i = buffer->NE;i > i; i--) {
+                            buffer->B[i] = buffer->B[i- 1];
                         }
-                        // Insert the new record
+
                         buffer->B[i] = newenr;
                         buffer->NE++;
-
-                        // Write the updated block back to the file
                         fseek(ms, (a + i) * sizeof(struct tblocChaine), SEEK_SET);
                         fwrite(buffer, sizeof(struct tblocChaine), 1, ms);
-
-                        // Update meta data
                         int nve;
                         lireMT(f, 3, &nve);
                         majmeta(f, 3, nve + 1);
                         return;
                     }
                 }
-                // Move to the next block in the chain
                 prevBuffer = buffer;
                 buffer = buffer->next;
             }
-
-            // If the insertion point is not found, create a new block and insert it at the end
             if (prevBuffer != NULL && buffer == NULL) {
                 struct tblocChaine *newBlock=creatBlocChaine(1);
                 newBlock->NE = 1;
@@ -635,12 +624,11 @@ void insertion(FILE *ms, FILE *f) {
                 strcpy(newBlock->B[0].nom, newenr.nom);
                 newBlock->B[0].supp = 0;
                 prevBuffer->next = &newBlock;
-                // Write the new block to the file
                 fwrite(&newBlock, sizeof(struct tblocChaine), 1, ms);
                 int nve;
                 lireMT(f, 3, &nve);
                 majmeta(f, 3, nve + 1);
-                majmeta(f, 2, taille + 1); // Update file size
+                majmeta(f, 2, taille + 1);
             }
         }
     }
@@ -651,20 +639,19 @@ void lirenregistrements(FILE *ms, FILE *f) {
     int taille;
     int a;
 
-    lireMT(f, 2, &taille); // Read file size in blocks
-    lireMT(f, 4, &a);      // Read address of the first block
-    lireMT(f, 5, orgaglobale); // Read the global organization mode
+    lireMT(f, 2, &taille);
+    lireMT(f, 4, &a);
+    lireMT(f, 5, orgaglobale);
 
     if (strcmp(orgaglobale, "contigue") == 0) {
         struct tbloc buffer;
-        fseek(ms, a * sizeof(struct tbloc), SEEK_SET); // Go to the first block
+        fseek(ms, a * sizeof(struct tbloc), SEEK_SET);
 
-        // Read and display records from contiguous blocks
         for (int i = 0; i < taille; i++) {
-            fread(&buffer, sizeof(struct tbloc), 1, ms); // Read the block
+            fread(&buffer, sizeof(struct tbloc), 1, ms);
             int j = 0;
             printf("BLOC", i+1);
-            while (j < buffer.NE) { // Iterate over the records in the block
+            while (j < buffer.NE) {
                     if(buffer.B[j].supp=0){
                 printf("ID: %d\nNom: %s\n", buffer.B[j].id, buffer.B[j].nom);
                     }
@@ -678,27 +665,20 @@ void lirenregistrements(FILE *ms, FILE *f) {
     }
     else if (strcmp(orgaglobale, "chainee") == 0) {
         struct tblocChaine buffer;
-
-        // We assume that 'a' is the address of the first block
         fseek(ms, a * sizeof(struct tblocChaine), SEEK_SET);
-        fread(&buffer, sizeof(struct tblocChaine), 1, ms); // Read the first block
-
-        // Traverse the linked list of blocks
-        int count = 0; // Counter for total records across all blocks
+        fread(&buffer, sizeof(struct tblocChaine), 1, ms);
+        int count = 0;
         while (buffer.next != NULL) {
             int j = 0;
-            while (j < buffer.NE) { // Iterate over the records in the block
+            while (j < buffer.NE) {
                 printf("ID: %d\nNom: %s\n", buffer.B[j].id, buffer.B[j].nom);
                 j++;
             }
             printf("Nombre d'enregistrements dans ce bloc: %d\n", buffer.NE);
-
-            // Move to the next block in the chain
-            buffer = *buffer.next; // Dereference the pointer to get the next block
-
+            buffer = *buffer.next;
             count++;
             if (buffer.next == NULL) {
-                break; // Break if we reached the last block
+                break;
             }
         }
         printf("Nombre total d'enregistrements: %d\n", count);
@@ -710,12 +690,13 @@ void compactageMS(FILE *ms) {
     fread(&bufferms, sizeof(struct MS), 1, ms);
     int nbrblocs = bufferms.nb;
     for (int i = 0; i < nbrblocs - 1; i++) {
-        if (bufferms.m[i].occup == 0) { // Check if the current block is empty
-            bufferms.m[i] = bufferms.m[i + 1]; // Move the next block to the current empty block
+        if (bufferms.m[i].occup == 0) {
+          bufferms.m[i] = bufferms.m[i + 1];
         }
     }
 }
-void chargementfichier(FILE *ms, FILE *f, FILE *MT) {
+}
+void chargementfichier(FILE *ms, FILE *f) {
     rewind(ms); // Rewind to the beginning of the file
      initialiserMS(ms);
     char orgaglobale[51];
@@ -748,8 +729,7 @@ void chargementfichier(FILE *ms, FILE *f, FILE *MT) {
                 }
             } else {
                 printf("Faire le compactage\n");
-                compactageMS(ms);  // If there aren't enough consecutive blocks, compact first
-                // After compacting, search for free blocks again
+                compactageMS(ms);
                 adrs = 0;
                 for (int j = 0; j < bufferms.nb; j++) {
                     if (bufferms.m[j].occup == 1) {
@@ -759,7 +739,7 @@ void chargementfichier(FILE *ms, FILE *f, FILE *MT) {
 
                 for (int i = 0; i < nbrblocs; i++) {
                     fread(&buffer, sizeof(struct tbloc), 1, ms);
-                    bufferms.m[adrs + i] = buffer;  // Load data again into the free blocks
+                    bufferms.m[adrs + i] = buffer;
                 }
             }
         } else {
@@ -769,17 +749,15 @@ void chargementfichier(FILE *ms, FILE *f, FILE *MT) {
     } else if (strcmp(orgaglobale, "chainee") == 0) {
         struct MSc bufferms;
         struct tblocChaine buffer;
-        fread(&bufferms, sizeof(struct MS), 1, ms);  // Read the MS structure for chained mode
-        if (bufferms.nblibre >= nbrblocs) {  // If enough free blocks
-            struct tblocChaine *current = &bufferms.tete;  // Start from the head of the chain
+        fread(&bufferms, sizeof(struct MS), 1, ms);
+        if (bufferms.nblibre >= nbrblocs) {
+            struct tblocChaine *current = &bufferms.tete;
             while (current != NULL && current->occup == 1) {
                 current = current->next;
             }
-
-            // If a free block is found
             if (current != NULL) {
                 fread(&buffer, sizeof(struct tblocChaine), 1, ms);
-                current->next = &buffer;  // Link the new block into the chain
+                current->next = &buffer;
                 current->occup = 1;  // Mark it as occupied
             }
         } else {
@@ -1112,7 +1090,10 @@ int main(){
         printf("Enter the intern mode of organization ( 0 for sorted / 1 for unsorted");
         scanf("%d", &choixIntern);
         CreeFichier(nomFichier, nbrEnreg,choixGlobale ,choixIntern);
-       chargementfichier(&ms , &f ,&metaf);
+           FILE *f;
+         f = fopen(nomFichier, "r+");
+
+       chargementfichier(&ms , &f );
         printf("\nEtat de la memoire secondaire apres chargement:\n");
         afficherEtatMS(&ms);
          break;
@@ -1127,6 +1108,12 @@ int main(){
             displayMetadata(&meta);
             break;
         }case 5:{
+            char nomfichier[51];
+             printf("Enter the name of the file");
+           scanf("%s",&nomfichier);
+              FILE *f;
+         f = fopen(nomfichier, "r+");
+
             int resultat [2];
             initialiserMS(&ms);
             printf("Search a record\n");
@@ -1134,18 +1121,23 @@ int main(){
             scanf ("%d", &id);
             recherchenregistement(&ms, &f , id , resultat );
              printf("\n=== Resultat de la recherche pour l'ID %d ===\n", id);
-             if (adrs[0] == -1 && adrs[1] == -1) {
+             if (resultat[0] == -1 && resultat[1] == -1) {
              printf(RED"Enregistrement non trouve.\n"RESET);
                 } else {
            printf(GREEN"Enregistrement trouve !\n"RESET);
             printf("Position :\n");
-            printf(" - Bloc numero : %d\n", adrs[0]);
-            printf(" - Position dans le bloc : %d\n", adrs[1]);
+            printf(" - Bloc numero : %d\n", resultat[0]);
+            printf(" - Position dans le bloc : %d\n", resultat[1]);
           }
           printf("=====================================\n");
             printf("\n");
             break;
         }case 6:{
+            char nomfichier[51];
+             printf("Enter the name of the file");
+           scanf("%s",&nomfichier);
+              FILE *f;
+         f = fopen(nomfichier, "r+");
            printf("Insert a record\n");
           insertion(&ms,&f);
            printf("\n");
@@ -1158,6 +1150,11 @@ int main(){
             scanf("%d", &choice2);
             switch(choice2){
              case 1:{
+                 char nomfichier[51];
+             printf("Enter the name of the file");
+           scanf("%s",&nomfichier);
+              FILE *f;
+         f = fopen(nomfichier, "r+");
                printf("Logical deletion\n");
                printf("give the id");
                scanf("%d", &id);
@@ -1165,6 +1162,11 @@ int main(){
               afficherEtatMS(&ms);
                break;
              } case 2: {
+                 char nomfichier[51];
+             printf("Enter the name of the file");
+           scanf("%s",&nomfichier);
+              FILE *f;
+         f = fopen(nomfichier, "r+");
                 printf("Physical deletion");
                 printf("give the id");
                 scanf("%d", &id);
@@ -1185,13 +1187,15 @@ int main(){
            printf("File deletion\n");
            char fileName [51];
            char metaName [55] ;
+           char msfile[55];
+           struct MS MS;
            printf("Give the name of the file");
            scanf("%s", fileName);
            strcpy(metaName, "meta");
            strcat(metaName, fileName);
             FILE *f = fopen(fileName, "rb+");
               FILE *meta = fopen(metaName, "rb+");
-        suppfichier(FILE *meta, FILE *f, struct MS *MS, const char *fileName);
+        suppfichier(&meta,&f, &MS, &fileName);
            afficherEtatMS(&ms);
            break;
           } case 10:{
