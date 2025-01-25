@@ -468,7 +468,7 @@ void supprPhysique(FILE *ms, FILE *f, int id) {
      printf("\n=== Suppression physique reussite ===\n", id);
 }
 //insertion d'un enregistrement
-void insertion(FILE *ms, FILE *f) {
+void insertion(Struct MS *disk, const char filename) {
     rewind(ms);
     struct tenr newenr;
     int a, taille;
@@ -784,13 +784,13 @@ void suppfichier(FILE *ms, FILE *f, struct MS *MS, const char *nomFichier) {
     int blocsLibres = 0;
 
     if (strcmp(orgGlobale, "contigue") == 0) {
-        // Libérer les blocs du fichier
+        // Libï¿½rer les blocs du fichier
         for (int i = adr; i < adr + taille; i++) {
             if (MS->m[i].occup == 1) {
                 // Marquer le bloc comme libre
                 MS->m[i].occup = 0;
                 MS->m[i].NE = 0;
-                // Mettre à jour le fichier physique
+                // Mettre ï¿½ jour le fichier physique
                 fseek(ms, i * sizeof(struct tbloc), SEEK_SET);
                 fwrite(&MS->m[i], sizeof(struct tbloc), 1, ms);
 
@@ -825,12 +825,12 @@ void suppfichier(FILE *ms, FILE *f, struct MS *MS, const char *nomFichier) {
         }
     }
 
-    // Supprimer le fichier des métadonnées
+    // Supprimer le fichier des mï¿½tadonnï¿½es
     remove(nomFichier);  // Supprimer le fichier physique si existant
 
 }
 
-}
+
 
 // Function to defragment a specific file
 void defragmentFile(struct MS *disk, struct tMetaD *meta, const char *fileName) {
